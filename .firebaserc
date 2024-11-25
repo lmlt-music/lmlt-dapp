@@ -1,7 +1,7 @@
 {
   "projects": {
-    "default": "next-firebase-mui",
-    "prod": "next-firebase-mui",
-    "test": "next-firebase-mui-test"
+    "default": "locartist-c2410",
+    "prod": "locartist-c2410",
+    "test": "locartist-c2410"
   }
 }

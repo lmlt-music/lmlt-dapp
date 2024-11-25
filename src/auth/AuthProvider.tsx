@@ -69,8 +69,8 @@ function AuthProvider({defaultUser, children}: { defaultUser: AuthUser | null, c
 
 
     useAsyncEffect(async () => {
-        if( user?.id )
-            await updateUserInfo(user.id, user.displayName ?? undefined, user.photoURL ?? undefined);
+        // if( user?.id )
+        //     await updateUserInfo(user.id, user.displayName ?? undefined, user.photoURL ?? undefined);
 
         setUserId(getAnalytics(), user?.id ?? null);
     }, [user?.id, user?.displayName, user?.photoURL]);

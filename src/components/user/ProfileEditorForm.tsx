@@ -1,10 +1,10 @@
 import { memo, useState } from "react";
-import { string, infer as Infer, object } from "zod";
+import { string, object, infer as Infer } from "zod";
 import { UserInfo } from "models/users";
 import { Controller, FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { updateUserInfo } from "@/services/users";
-import { uploadFileToStorage } from "@/services/storage"; // Firebase Storage Helper
+import { uploadFileToStorage } from "@/services/storage";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
@@ -18,63 +18,33 @@ import TwitterIcon from "@mui/icons-material/Twitter";
 import InstagramIcon from "@mui/icons-material/Instagram";
 import AppleIcon from "@mui/icons-material/Apple";
 import SpotifyIcon from "@mui/icons-material/LibraryMusic";
+import TikTokIcon from "@mui/icons-material/MusicNote"; // Replace with TikTok icon
+import YouTubeIcon from "@mui/icons-material/YouTube";
 import { styled } from "@mui/material/styles";
 
-// Validation Schema
+// Schema for Validation
 const schema = object({
-  name: string().min(3).max(30),
-  username: string().min(3).max(30),
-  bio: string().max(160).optional(),
-  email_address: string().email(),
-  links: object({
-    website: string()
-      .optional()
-      .refine((url) => !url || isValidURL(url), {
-        message: "Invalid URL",
-      }),
-    spotify: string()
-      .optional()
-      .refine((url) => !url || isValidURL(url), {
-        message: "Invalid URL",
-      }),
-    itunes: string()
-      .optional()
-      .refine((url) => !url || isValidURL(url), {
-        message: "Invalid URL",
-      }),
-    instagram: string()
-      .optional()
-      .refine((url) => !url || isValidURL(url), {
-        message: "Invalid URL",
-      }),
-    twitter: string()
-      .optional()
-      .refine((url) => !url || isValidURL(url), {
-        message: "Invalid URL",
-      }),
-  }).optional(),
+  profile: object({
+    name: string().min(3).max(30),
+    username: string().min(3).max(30),
+    bio: string().max(160).optional(),
+    email_address: string().email(),
+    image: string().optional(),
+    cover: string().optional(),
+    links: object({
+      website: string().optional().nullable(),
+      spotify: string().optional().nullable(),
+      itunes: string().optional().nullable(),
+      instagram: string().optional().nullable(),
+      twitter: string().optional().nullable(),
+      tiktok: string().optional().nullable(),
+      youtube: string().optional().nullable(),
+    }).optional(),
+  }),
 });
 
-// Helper Functions
-const isValidURL = (url: string) => {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
+type Schema = Infer<typeof schema>;
 
-const preprocessLinks = (links: Record<string, string | undefined>) => {
-  return Object.fromEntries(
-    Object.entries(links || {}).map(([key, value]) => [
-      key,
-      value && !value.startsWith("http") ? `https://${value}` : value,
-    ])
-  );
-};
-
-// Styled Components
 const StyledTextField = styled(TextField)({
   "& .MuiInputBase-root": {
     backgroundColor: "#18171C",
@@ -86,8 +56,6 @@ const StyledTextField = styled(TextField)({
   },
 });
 
-type Schema = Infer<typeof schema>;
-
 function ProfileEditorForm({ user, stopEditing }: { user: UserInfo; stopEditing: () => void }) {
   const [profileImage, setProfileImage] = useState(user.profile.image);
   const [coverImage, setCoverImage] = useState(user.profile.cover);
@@ -97,11 +65,15 @@ function ProfileEditorForm({ user, stopEditing }: { user: UserInfo; stopEditing:
     mode: "onBlur",
     resolver: zodResolver(schema),
     defaultValues: {
-      name: user?.profile?.name || "",
-      username: user?.profile?.username || "",
-      bio: user?.profile?.bio || "",
-      email_address: user?.profile?.email_address || "",
-      links: user?.profile?.links || {},
+      profile: {
+        name: user.profile.name,
+        username: user.profile.username,
+        bio: user.profile.bio,
+        email_address: user.profile.email_address,
+        image: user.profile.image,
+        cover: user.profile.cover,
+        links: user.profile.links,
+      },
     },
   });
 
@@ -119,27 +91,25 @@ function ProfileEditorForm({ user, stopEditing }: { user: UserInfo; stopEditing:
       const fileUrl = await uploadFileToStorage(user.uid, file, type, (progress) => {
         setUploadProgress(progress);
       });
-      setUploadProgress(null); // Reset after upload completes
+      setUploadProgress(null);
       if (type === "profile") {
         setProfileImage(fileUrl);
-        setValue("image", fileUrl);
+        setValue("profile.image", fileUrl, { shouldValidate: true });
       } else if (type === "cover") {
         setCoverImage(fileUrl);
-        setValue("cover", fileUrl);
+        setValue("profile.cover", fileUrl, { shouldValidate: true });
       }
     }
   };
 
   const onSubmit = async (data: Schema) => {
-    const links = preprocessLinks(data.links || {});
-    await updateUserInfo(user.uid, { ...data, links, image: profileImage, cover: coverImage });
+    await updateUserInfo(user.uid, { profile: data.profile });
     stopEditing();
   };
 
   return (
     <FormProvider {...formMethods}>
       <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Profile Image Upload */}
         <Stack direction="row" spacing={2} alignItems="center" mb={3}>
           <Avatar src={profileImage} sx={{ width: 80, height: 80 }} />
           <IconButton color="primary" component="label">
@@ -148,10 +118,8 @@ function ProfileEditorForm({ user, stopEditing }: { user: UserInfo; stopEditing:
           </IconButton>
         </Stack>
 
-        {/* Upload Progress */}
         {uploadProgress !== null && <CircularProgress variant="determinate" value={uploadProgress} sx={{ mb: 2 }} />}
 
-        {/* Cover Image Upload */}
         <Stack direction="row" spacing={2} alignItems="center" mb={3}>
           <Typography>Cover Image</Typography>
           <IconButton color="primary" component="label">
@@ -160,90 +128,71 @@ function ProfileEditorForm({ user, stopEditing }: { user: UserInfo; stopEditing:
           </IconButton>
         </Stack>
 
-        {/* Name Field */}
         <Controller
-          name="name"
+          name="profile.name"
           control={control}
           render={({ field }) => (
-            <StyledTextField {...field} label="Name" error={Boolean(errors.name)} helperText={errors.name?.message} fullWidth />
+            <StyledTextField {...field} label="Name" error={Boolean(errors.profile?.name)} helperText={errors.profile?.name?.message} fullWidth />
           )}
         />
 
-        {/* Username Field (Disabled) */}
         <Controller
-          name="username"
+          name="profile.username"
           control={control}
           render={({ field }) => (
-            <StyledTextField
-              {...field}
-              label="Username"
-              error={Boolean(errors.username)}
-              helperText={errors.username?.message}
-              fullWidth
-              disabled
-            />
+            <StyledTextField {...field} label="Username" disabled fullWidth />
           )}
         />
 
-        {/* Bio Field */}
         <Controller
-          name="bio"
+          name="profile.bio"
           control={control}
           render={({ field }) => (
-            <StyledTextField {...field} label="Bio" error={Boolean(errors.bio)} helperText={errors.bio?.message} fullWidth />
+            <StyledTextField {...field} label="Bio" error={Boolean(errors.profile?.bio)} helperText={errors.profile?.bio?.message} fullWidth />
           )}
         />
 
-        {/* Email Field (Disabled) */}
         <Controller
-          name="email_address"
+          name="profile.email_address"
           control={control}
           render={({ field }) => (
-            <StyledTextField
-              {...field}
-              label="Email Address"
-              error={Boolean(errors.email_address)}
-              helperText={errors.email_address?.message}
-              fullWidth
-              disabled
-            />
+            <StyledTextField {...field} label="Email" disabled fullWidth />
           )}
         />
 
-        {/* Links Fields */}
         <Typography variant="h6" mt={3} mb={2} color="#FFFFFF">
           Social Links
         </Typography>
-        {["website", "spotify", "itunes", "instagram", "twitter"].map((linkKey) => {
-          const icons: Record<string, React.ReactNode> = {
-            website: <LanguageIcon sx={{ mr: 1 }} />,
-            spotify: <SpotifyIcon sx={{ mr: 1 }} />,
-            itunes: <AppleIcon sx={{ mr: 1 }} />,
-            instagram: <InstagramIcon sx={{ mr: 1 }} />,
-            twitter: <TwitterIcon sx={{ mr: 1 }} />,
-          };
-          return (
-            <Controller
-              key={linkKey}
-              name={`links.${linkKey}`}
-              control={control}
-              render={({ field }) => (
-                <StyledTextField
-                  {...field}
-                  label={linkKey.charAt(0).toUpperCase() + linkKey.slice(1)}
-                  InputProps={{
-                    startAdornment: icons[linkKey],
-                  }}
-                  error={Boolean(errors.links?.[linkKey])}
-                  helperText={errors.links?.[linkKey]?.message}
-                  fullWidth
-                />
-              )}
-            />
-          );
-        })}
+        {(["website", "spotify", "itunes", "instagram", "twitter", "tiktok", "youtube"] as const).map((key) => (
+          <Controller
+            key={key}
+            name={`profile.links.${key}`}
+            control={control}
+            render={({ field }) => (
+              <StyledTextField
+                {...field}
+                label={key.charAt(0).toUpperCase() + key.slice(1)}
+                InputProps={{
+                  startAdornment: (
+                    {
+                      website: <LanguageIcon sx={{ mr: 1 }} />,
+                      spotify: <SpotifyIcon sx={{ mr: 1 }} />,
+                      itunes: <AppleIcon sx={{ mr: 1 }} />,
+                      instagram: <InstagramIcon sx={{ mr: 1 }} />,
+                      twitter: <TwitterIcon sx={{ mr: 1 }} />,
+                      tiktok: <TikTokIcon sx={{ mr: 1 }} />,
+                      youtube: <YouTubeIcon sx={{ mr: 1 }} />,
+                    }[key]
+                  ),
+                }}
+                error={Boolean(errors.profile?.links?.[key])}
+                helperText={errors.profile?.links?.[key]?.message}
+                fullWidth
+              />
+            )}
+          />
+        ))}
 
-        {/* Action Buttons */}
         <Stack direction="row" spacing={2} mt={3}>
           <Button type="submit" variant="contained" sx={{ backgroundColor: "#ff4081" }}>
             Save

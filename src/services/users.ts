@@ -12,7 +12,7 @@ export const onUserInfoChanged = (userId: string, onChanged: (user: UserInfo | n
     });
 }
 
-export const updateUserInfo = async (userId: string, displayName?: string, imageUrl?: string) => {
+export const updateUserInfo = async (userId: string, userInfo: { profile: any; links?: any; image?: any; cover?: any; }) => {
     const user = getAuth().currentUser;
     if (!user)
         return;
@@ -23,14 +23,15 @@ export const updateUserInfo = async (userId: string, displayName?: string, image
     // }
 
     // Immediate update only if needed (updates are more expensive than reads)
-    const userInfo = (await getDoc(db.user(userId))).data() as UserInfo | undefined;
-    if (userInfo?.profile.name !== displayName || (imageUrl && userInfo?.profile.image !== imageUrl)) {
-        console.log(`Setting ${userId} info to ${displayName} ${imageUrl}`);
+    const existingUserInfo = (await getDoc(db.user(userId))).data() as UserInfo | undefined;
+    if (existingUserInfo) {
+        console.log(`Setting ${userId} info to`, existingUserInfo);
         await setDoc(db.user(userId), {
+            ...existingUserInfo,
+            ...userInfo,
             profile: {
-                ...userInfo?.profile,
-                name: displayName,
-                image: imageUrl
+                ...existingUserInfo.profile,
+                ...userInfo.profile,
             }
         }, { merge: true });
     }
