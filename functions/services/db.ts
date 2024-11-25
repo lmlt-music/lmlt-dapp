@@ -32,10 +32,15 @@ function dataPoint<T>(collectionPath: string, docPath?: string) {
 
 
 /* eslint-disable max-len, @typescript-eslint/explicit-module-boundary-types */
+import { Comment } from "../models/comments";
+
 const db = {
-    users: dataPoint<UserInfo>('users'),
-    user: (userId: string) => dataPoint<UserInfo>('users', userId),
-    emailQueue: dataPoint<EmailQueue>('emailQueue'),
+  users: dataPoint<UserInfo>("users"),
+  user: (userId: string) => dataPoint<UserInfo>("users", userId),
+  emailQueue: dataPoint<EmailQueue>("emailQueue"),
+  comments: dataPoint<Comment>("comments"), // Add the comments collection
+  comment: (commentId: string) => dataPoint<Comment>("comments", commentId), // For specific comment documents
 };
+
 /* eslint-enable max-len, @typescript-eslint/explicit-module-boundary-types */
 export {db};

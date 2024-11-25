@@ -13,6 +13,8 @@ import '@/firebase';
 import '@/app/globals.css';
 import AuthProvider from "@/auth/AuthProvider";
 import {getUser} from "@/auth/getUser";
+import { ThirdwebProvider, ConnectButton } from "thirdweb/react";
+import { createThirdwebClient } from "thirdweb";
 
 
 const title = 'Next.js + Firebase + MUI Starter';
@@ -32,6 +34,10 @@ export async function generateMetadata(): Promise<Metadata> {
         },
     };
 }
+
+const CLIENT_ID = "a34344b907a4dd3c2811807c82a1b4bd"; // Replace with your actual client ID
+
+const client = createThirdwebClient({ clientId: CLIENT_ID });
 
 
 export default async function RootLayout({children}: {
@@ -56,8 +62,11 @@ export default async function RootLayout({children}: {
         <EmotionRootStyleRegistry>
         <ThemeProvider>
         <ErrorBoundary>
-        <AuthProvider defaultUser={defaultUser}>
-            <CssBaseline/>
+                            <AuthProvider defaultUser={defaultUser}>
+                                <ThirdwebProvider>
+                                    <CssBaseline />
+                                </ThirdwebProvider>
+                                
             <AppLayout>
                 {children}
             </AppLayout>
