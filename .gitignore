@@ -16,6 +16,11 @@ tsconfig.tsbuildinfo
 # IntelliJ
 .idea/
 
+# Ignore sensitive files
+locartist-c2410-firebase-adminsdk-wcsec-747a2ebd78.json
+package-lock.json
+
+
 # Logs
 logs
 *.log
